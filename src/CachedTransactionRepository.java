@@ -13,7 +13,7 @@ public class CachedTransactionRepository implements TransactionRepository {
     public CachedTransactionRepository(TransactionRepository delegate) {
         this.delegate = delegate;
         this.cache = Caffeine.newBuilder()
-            .expireAfterWrite(10, TimeUnit.MINUTES)
+            .expireAfterAccess(10, TimeUnit.MINUTES) // Dynamic expiry can be implemented
             .maximumSize(1000)
             .build();
     }
@@ -34,12 +34,10 @@ public class CachedTransactionRepository implements TransactionRepository {
 
     @Override
     public Optional<Transaction> findById(String txId) {
-        // Check cache first
         Transaction cachedTx = cache.getIfPresent(txId);
         if (cachedTx != null) {
             return Optional.of(cachedTx);
         }
-        // Fallback to the delegate repository
         Optional<Transaction> transaction = delegate.findById(txId);
         transaction.ifPresent(tx -> cache.put(txId, tx));
         return transaction;
@@ -48,11 +46,15 @@ public class CachedTransactionRepository implements TransactionRepository {
     @Override
     public void updateState(String txId, TransactionState state) {
         delegate.updateState(txId, state);
-        // Update cache if necessary
         Optional<Transaction> transaction = delegate.findById(txId);
         transaction.ifPresent(tx -> {
             tx.setState(state);
             cache.put(txId, tx);
         });
+    }
+
+    // Implement indexing methods based on the database being used
+    public void createIndex(String fieldName) {
+        // Logic to create index on the specified field (implementation depends on the database)
     }
 }
