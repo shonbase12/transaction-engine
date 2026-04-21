@@ -3,10 +3,10 @@ package com.novapay.transactions;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TransactionRepositoryImpl implements TransactionRepository {
-    private Map<String, Transaction> transactionStore = new HashMap<>(); // Simulated in-memory store for caching
+    private Map<String, Transaction> transactionStore = new ConcurrentHashMap<>(); // Use ConcurrentHashMap for thread safety
 
     @Override
     public void save(Transaction tx) {
@@ -26,12 +26,15 @@ public class TransactionRepositoryImpl implements TransactionRepository {
     }
 
     @Override
-    public Optional<List<Transaction>> findByIds(List<String> txIds) {
+    public List<Transaction> findByIds(List<String> txIds) {
         List<Transaction> results = new ArrayList<>();
         for (String txId : txIds) {
-            transactionStore.get(txId).ifPresent(results::add);
+            Transaction tx = transactionStore.get(txId);
+            if (tx != null) {
+                results.add(tx);
+            }
         }
-        return Optional.of(results);
+        return results; // Return a list instead of Optional
     }
 
     @Override
