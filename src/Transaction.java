@@ -8,6 +8,23 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Represents a financial transaction with a unique ID, amount, type, timestamp, accountId, currency, description, and state.
+ *
+ * <p>State transitions are controlled and explicit:
+ * <ul>
+ *   <li>Initial state: PENDING</li>
+ *   <li>Allowed transitions:
+ *     <ul>
+ *       <li>PENDING -> COMPLETED</li>
+ *       <li>PENDING -> CANCELLED</li>
+ *     </ul>
+ *   </li>
+ *   <li>No transitions allowed from COMPLETED or CANCELLED to other states.</li>
+ * </ul>
+ * </p>
+ *
+ * <p>The transaction amount must be zero or positive, and the currency code must be supported.
+ * Description is sanitized and limited to 255 characters.
+ * </p>
  */
 public final class Transaction {
     private static final Logger logger = LoggerFactory.getLogger(Transaction.class);
@@ -163,6 +180,7 @@ public final class Transaction {
     /**
      * Transition the transaction state to COMPLETED.
      * Allowed only if current state is PENDING.
+     * Once COMPLETED, the transaction state is immutable.
      */
     public void complete() {
         if (state != TransactionState.PENDING) {
@@ -177,6 +195,7 @@ public final class Transaction {
     /**
      * Transition the transaction state to CANCELLED.
      * Allowed only if current state is PENDING.
+     * Once CANCELLED, the transaction state is immutable.
      */
     public void cancel() {
         if (state != TransactionState.PENDING) {
