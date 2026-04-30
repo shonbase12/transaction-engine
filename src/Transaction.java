@@ -13,13 +13,7 @@ import org.slf4j.LoggerFactory;
  * <p>State transitions are controlled and explicit:
  * <ul>
  *   <li>Initial state: PENDING</li>
- *   <li>Allowed transitions:
- *     <ul>
- *       <li>PENDING -> COMPLETED</li>
- *       <li>PENDING -> CANCELLED</li>
- *     </ul>
- *   </li>
- *   <li>No transitions allowed from COMPLETED or CANCELLED to other states.</li>
+ *   <li>Allowed transitions managed by TransactionStateMachine.</li>
  * </ul>
  * </p>
  *
@@ -183,7 +177,7 @@ public final class Transaction {
      * @return new Transaction instance with COMPLETED state
      */
     public Transaction complete() {
-        if (state != TransactionState.PENDING) {
+        if (!TransactionStateMachine.canTransition(state, TransactionState.COMPLETED)) {
             String msg = "Cannot complete transaction from state: " + state;
             logger.error(msg);
             throw new IllegalStateException(msg);
@@ -198,7 +192,7 @@ public final class Transaction {
      * @return new Transaction instance with CANCELLED state
      */
     public Transaction cancel() {
-        if (state != TransactionState.PENDING) {
+        if (!TransactionStateMachine.canTransition(state, TransactionState.CANCELLED)) {
             String msg = "Cannot cancel transaction from state: " + state;
             logger.error(msg);
             throw new IllegalStateException(msg);
@@ -239,5 +233,15 @@ public final class Transaction {
     @Override
     public int hashCode() {
         return Objects.hash(id, amount, type, timestamp, accountId, currency, description, state);
+    }
+}
+
+// Additional class for state management
+class TransactionStateMachine {
+    public static boolean canTransition(Transaction.TransactionState from, Transaction.TransactionState to) {
+        if (from == Transaction.TransactionState.PENDING) {
+            return to == Transaction.TransactionState.COMPLETED || to == Transaction.TransactionState.CANCELLED;
+        }
+        return false;
     }
 }
