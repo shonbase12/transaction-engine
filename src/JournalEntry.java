@@ -1,3 +1,4 @@
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,21 +42,26 @@ public class JournalEntry {
             throw new IllegalArgumentException("Transactions list cannot be null or empty.");
         }
 
-        double totalDebits = 0.0;
-        double totalCredits = 0.0;
+        BigDecimal totalDebits = BigDecimal.ZERO;
+        BigDecimal totalCredits = BigDecimal.ZERO;
 
         for (Transaction t : transactions) {
+            // Only consider transactions in COMPLETED state
+            if (t.getState() != Transaction.TransactionState.COMPLETED) {
+                logger.error("JournalEntry validation failed: Transaction {} is not in COMPLETED state.", t.getId());
+                throw new IllegalArgumentException("All transactions must be COMPLETED to be included in the journal entry.");
+            }
             if (t.getType() == Transaction.TransactionType.DEBIT) {
-                totalDebits += t.getAmount();
+                totalDebits = totalDebits.add(t.getAmount());
             } else if (t.getType() == Transaction.TransactionType.CREDIT) {
-                totalCredits += t.getAmount();
+                totalCredits = totalCredits.add(t.getAmount());
             } else {
                 logger.error("JournalEntry validation failed: Unknown transaction type {}.", t.getType());
                 throw new IllegalArgumentException("Unknown transaction type.");
             }
         }
 
-        if (Double.compare(totalDebits, totalCredits) != 0) {
+        if (totalDebits.compareTo(totalCredits) != 0) {
             logger.error("JournalEntry validation failed: Debits ({}) do not equal credits ({}).", totalDebits, totalCredits);
             throw new IllegalArgumentException("Journal entry is not balanced: debits do not equal credits.");
         }
