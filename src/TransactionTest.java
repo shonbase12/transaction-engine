@@ -59,6 +59,17 @@ public class TransactionTest {
     }
 
     @Test
+    public void testInvalidCurrencyCodeFormat() {
+        String[] invalidCurrencies = {"US", "usd", "US1", "US$", "123", "U", "USDA"};
+        for (String currency : invalidCurrencies) {
+            Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+                new Transaction("12358", 100.0, Transaction.TransactionType.CREDIT, "acc13", currency, "Invalid currency code");
+            });
+            assertEquals("Currency code must be a 3-letter uppercase string.", exception.getMessage());
+        }
+    }
+
+    @Test
     public void testNullAccountId() {
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             new Transaction("12348", 100.0, Transaction.TransactionType.CREDIT, null, "USD", "Deposit");
