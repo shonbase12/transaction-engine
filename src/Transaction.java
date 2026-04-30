@@ -1,3 +1,4 @@
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Currency;
 import java.util.HashSet;
@@ -49,13 +50,13 @@ public final class Transaction {
     }
 
     private final String id;
-    private final double amount;
+    private final BigDecimal amount;
     private final TransactionType type; // Use enum for type safety
     private final Instant timestamp; // Use Instant for better time management
     private final String accountId;
     private final Currency currency;
     private final String description;
-    private TransactionState state; // mutable state with controlled transitions
+    private final TransactionState state; // immutable state
 
     /**
      * Constructs a Transaction instance with the given parameters and current timestamp.
@@ -67,8 +68,8 @@ public final class Transaction {
      * @param currency    the currency of the transaction
      * @param description the description of the transaction (nullable, max 255 chars)
      */
-    public Transaction(String id, double amount, TransactionType type, String accountId, String currencyCode, String description) {
-        this(id, amount, type, accountId, currencyCode, description, Instant.now());
+    public Transaction(String id, BigDecimal amount, TransactionType type, String accountId, String currencyCode, String description) {
+        this(id, amount, type, accountId, currencyCode, description, Instant.now(), TransactionState.PENDING);
     }
 
     /**
@@ -81,8 +82,9 @@ public final class Transaction {
      * @param currency    the currency of the transaction
      * @param description the description of the transaction (nullable, max 255 chars)
      * @param timestamp   the timestamp of the transaction, must not be null
+     * @param state       the state of the transaction
      */
-    public Transaction(String id, double amount, TransactionType type, String accountId, String currencyCode, String description, Instant timestamp) {
+    private Transaction(String id, BigDecimal amount, TransactionType type, String accountId, String currencyCode, String description, Instant timestamp, TransactionState state) {
         validateTransaction(id, amount, type, accountId, currencyCode, description, timestamp);
         this.id = id;
         this.amount = amount;
@@ -91,18 +93,18 @@ public final class Transaction {
         this.currency = Currency.getInstance(currencyCode);
         this.description = sanitizeDescription(description);
         this.timestamp = timestamp;
-        this.state = TransactionState.PENDING; // initial state
+        this.state = state;
         logger.info("Transaction created: {}", this);
     }
 
-    private void validateTransaction(String id, double amount, TransactionType type, String accountId, String currencyCode, String description, Instant timestamp) {
+    private void validateTransaction(String id, BigDecimal amount, TransactionType type, String accountId, String currencyCode, String description, Instant timestamp) {
         if (id == null || id.isEmpty()) {
             logger.error("Transaction creation failed: ID cannot be null or empty.");
             throw new IllegalArgumentException("Transaction ID cannot be null or empty.");
         }
-        if (amount < 0) {
-            logger.error("Transaction creation failed: Amount cannot be negative.");
-            throw new IllegalArgumentException("Amount cannot be negative.");
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
+            logger.error("Transaction creation failed: Amount cannot be null or negative.");
+            throw new IllegalArgumentException("Amount cannot be null or negative.");
         }
         if (type == null) {
             logger.error("Transaction creation failed: Type cannot be null.");
@@ -120,7 +122,6 @@ public final class Transaction {
             logger.error("Transaction creation failed: Unsupported currency code: {}", currencyCode);
             throw new IllegalArgumentException("Unsupported currency code: " + currencyCode);
         }
-        // Validate currency code by attempting to get Currency instance
         try {
             Currency.getInstance(currencyCode);
         } catch (IllegalArgumentException e) {
@@ -141,7 +142,6 @@ public final class Transaction {
         if (description == null) {
             return null;
         }
-        // Example sanitation: trim and replace control chars
         return description.trim().replaceAll("[\x00-\x1F\x7F]", "");
     }
 
@@ -149,7 +149,7 @@ public final class Transaction {
         return id;
     }
 
-    public double getAmount() {
+    public BigDecimal getAmount() {
         return amount;
     }
 
@@ -178,33 +178,33 @@ public final class Transaction {
     }
 
     /**
-     * Transition the transaction state to COMPLETED.
+     * Return a new Transaction instance with state COMPLETED.
      * Allowed only if current state is PENDING.
-     * Once COMPLETED, the transaction state is immutable.
+     * @return new Transaction instance with COMPLETED state
      */
-    public void complete() {
+    public Transaction complete() {
         if (state != TransactionState.PENDING) {
             String msg = "Cannot complete transaction from state: " + state;
             logger.error(msg);
             throw new IllegalStateException(msg);
         }
-        state = TransactionState.COMPLETED;
         logger.info("Transaction {} marked as COMPLETED.", id);
+        return new Transaction(id, amount, type, accountId, currency.getCurrencyCode(), description, timestamp, TransactionState.COMPLETED);
     }
 
     /**
-     * Transition the transaction state to CANCELLED.
+     * Return a new Transaction instance with state CANCELLED.
      * Allowed only if current state is PENDING.
-     * Once CANCELLED, the transaction state is immutable.
+     * @return new Transaction instance with CANCELLED state
      */
-    public void cancel() {
+    public Transaction cancel() {
         if (state != TransactionState.PENDING) {
             String msg = "Cannot cancel transaction from state: " + state;
             logger.error(msg);
             throw new IllegalStateException(msg);
         }
-        state = TransactionState.CANCELLED;
         logger.info("Transaction {} marked as CANCELLED.", id);
+        return new Transaction(id, amount, type, accountId, currency.getCurrencyCode(), description, timestamp, TransactionState.CANCELLED);
     }
 
     @Override
@@ -226,7 +226,7 @@ public final class Transaction {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Transaction that = (Transaction) o;
-        return Double.compare(that.amount, amount) == 0 &&
+        return amount.equals(that.amount) &&
                 id.equals(that.id) &&
                 type == that.type &&
                 timestamp.equals(that.timestamp) &&
