@@ -1,5 +1,8 @@
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class TransactionTest {
     @Test
@@ -135,5 +138,35 @@ public class TransactionTest {
         Transaction transaction = new Transaction("12356", 100.0, Transaction.TransactionType.CREDIT, "acc11", "USD", "Deposit");
         long afterCreation = System.currentTimeMillis();
         assertTrue(transaction.getTimestamp().getTime() >= beforeCreation && transaction.getTimestamp().getTime() <= afterCreation);
+    }
+
+    @Test
+    public void testConcurrentTransactionCreation() throws InterruptedException {
+        int threadCount = 50;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            final int id = i;
+            executor.submit(() -> {
+                Transaction transaction = new Transaction(
+                    "concurrent-" + id,
+                    100.0 + id,
+                    Transaction.TransactionType.CREDIT,
+                    "acc" + id,
+                    "USD",
+                    "Concurrent deposit " + id
+                );
+                assertEquals("concurrent-" + id, transaction.getId());
+                assertEquals(100.0 + id, transaction.getAmount());
+                assertEquals(Transaction.TransactionType.CREDIT, transaction.getType());
+                assertEquals("acc" + id, transaction.getAccountId());
+                assertEquals("USD", transaction.getCurrency());
+                assertEquals("Concurrent deposit " + id, transaction.getDescription());
+            });
+        }
+
+        executor.shutdown();
+        boolean finished = executor.awaitTermination(5, TimeUnit.SECONDS);
+        assertTrue(finished, "Executor did not terminate in the expected time");
     }
 }
