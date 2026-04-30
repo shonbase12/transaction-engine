@@ -53,6 +53,12 @@ public class TransactionTest {
     }
 
     @Test
+    public void testSmallestPositiveAmount() {
+        Transaction transaction = new Transaction("12357", 0.0001, Transaction.TransactionType.CREDIT, "acc12", "USD", "Small amount");
+        assertEquals(0.0001, transaction.getAmount());
+    }
+
+    @Test
     public void testNullAccountId() {
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             new Transaction("12348", 100.0, Transaction.TransactionType.CREDIT, null, "USD", "Deposit");
