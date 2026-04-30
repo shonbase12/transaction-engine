@@ -37,4 +37,86 @@ public class TransactionTest {
         });
         assertEquals("Transaction type cannot be null.", exception.getMessage());
     }
+
+    @Test
+    public void testZeroAmount() {
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            new Transaction("12346", 0.0, Transaction.TransactionType.DEBIT, "acc2", "USD", "Withdrawal");
+        });
+        assertEquals("Amount must be positive.", exception.getMessage());
+    }
+
+    @Test
+    public void testLargeAmount() {
+        Transaction transaction = new Transaction("12347", 1e10, Transaction.TransactionType.CREDIT, "acc3", "USD", "Large deposit");
+        assertEquals(1e10, transaction.getAmount());
+    }
+
+    @Test
+    public void testNullAccountId() {
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            new Transaction("12348", 100.0, Transaction.TransactionType.CREDIT, null, "USD", "Deposit");
+        });
+        assertEquals("Account ID cannot be null or empty.", exception.getMessage());
+    }
+
+    @Test
+    public void testEmptyAccountId() {
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            new Transaction("12349", 100.0, Transaction.TransactionType.CREDIT, "", "USD", "Deposit");
+        });
+        assertEquals("Account ID cannot be null or empty.", exception.getMessage());
+    }
+
+    @Test
+    public void testNullCurrency() {
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            new Transaction("12350", 100.0, Transaction.TransactionType.CREDIT, "acc5", null, "Deposit");
+        });
+        assertEquals("Currency cannot be null or empty.", exception.getMessage());
+    }
+
+    @Test
+    public void testEmptyCurrency() {
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            new Transaction("12351", 100.0, Transaction.TransactionType.CREDIT, "acc6", "", "Deposit");
+        });
+        assertEquals("Currency cannot be null or empty.", exception.getMessage());
+    }
+
+    @Test
+    public void testNullDescription() {
+        Transaction transaction = new Transaction("12352", 100.0, Transaction.TransactionType.CREDIT, "acc7", "USD", null);
+        assertNull(transaction.getDescription());
+    }
+
+    @Test
+    public void testEmptyDescription() {
+        Transaction transaction = new Transaction("12353", 100.0, Transaction.TransactionType.CREDIT, "acc8", "USD", "");
+        assertEquals("", transaction.getDescription());
+    }
+
+    @Test
+    public void testTimestampImmutability() throws InterruptedException {
+        Transaction transaction = new Transaction("12354", 100.0, Transaction.TransactionType.CREDIT, "acc9", "USD", "Deposit");
+        long originalTimestamp = transaction.getTimestamp().getTime();
+        Thread.sleep(10);
+        assertEquals(originalTimestamp, transaction.getTimestamp().getTime());
+    }
+
+    @Test
+    public void testTransactionTypeVariations() {
+        for (Transaction.TransactionType type : Transaction.TransactionType.values()) {
+            Transaction transaction = new Transaction("12355", 100.0, type, "acc10", "USD", "Test");
+            assertEquals(type, transaction.getType());
+        }
+    }
+
+    @Test
+    public void testTimestampCloseToCreation() {
+        long beforeCreation = System.currentTimeMillis();
+        Transaction transaction = new Transaction("12356", 100.0, Transaction.TransactionType.CREDIT, "acc11", "USD", "Deposit");
+        long afterCreation = System.currentTimeMillis();
+        assertTrue(transaction.getTimestamp().getTime() >= beforeCreation && transaction.getTimestamp().getTime() <= afterCreation);
+    }
 }
