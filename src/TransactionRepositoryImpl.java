@@ -42,13 +42,28 @@ public class TransactionRepositoryImpl implements TransactionRepository {
     }
 
     @Override
-    public void updateState(String txId, TransactionState state) {
-        Transaction tx = transactionStore.get(txId);
-        if (tx != null) {
-            tx.setState(state);
-        } else {
+    public void updateState(String txId, TransactionState newState) {
+        Transaction oldTx = transactionStore.get(txId);
+        if (oldTx == null) {
             logger.error("Failed to update state: Transaction with id {} not found.", txId);
             throw new IllegalArgumentException("Transaction with id " + txId + " not found.");
         }
+
+        Transaction newTx;
+        switch (newState) {
+            case COMPLETED:
+                newTx = oldTx.complete();
+                break;
+            case CANCELLED:
+                newTx = oldTx.cancel();
+                break;
+            default:
+                String msg = "Invalid state transition to " + newState + " for transaction " + txId;
+                logger.error(msg);
+                throw new IllegalArgumentException(msg);
+        }
+
+        transactionStore.put(txId, newTx);
+        logger.info("Transaction {} state updated to {}.", txId, newState);
     }
 }
