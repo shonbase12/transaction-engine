@@ -1,0 +1,74 @@
+<configuration>
+    <!-- Console appender with LogstashEncoder for structured JSON logging -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"appname":"transaction-engine"}</customFields>
+            <includeMdc>true</includeMdc>
+            <includeCallerData>true</includeCallerData>
+        </encoder>
+    </appender>
+
+    <!-- File appender with rolling policy for production or persistent logging -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/application.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/application.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"appname":"transaction-engine"}</customFields>
+            <includeMdc>true</includeMdc>
+            <includeCallerData>true</includeCallerData>
+        </encoder>
+    </appender>
+
+    <!-- Async appenders to improve performance -->
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="CONSOLE" />
+    </appender>
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="FILE" />
+    </appender>
+
+    <!-- Centralized log management appender (Logstash TCP example) -->
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>logstash-host:5000</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"appname":"transaction-engine"}</customFields>
+            <includeMdc>true</includeMdc>
+            <includeCallerData>true</includeCallerData>
+        </encoder>
+        <includeCallerData>true</includeCallerData>
+    </appender>
+
+    <!-- Root logger with dynamic level control and flexible appender references -->
+    <root level="INFO">
+        <!-- Use async console appender by default -->
+        <appender-ref ref="ASYNC_CONSOLE" />
+        <!-- Optional file appender, enable in production -->
+        <!-- <appender-ref ref="ASYNC_FILE" /> -->
+        <!-- Optional centralized logging, enable if infrastructure supports -->
+        <!-- <appender-ref ref="LOGSTASH" /> -->
+    </root>
+
+    <!-- Library loggers to reduce noise -->
+    <logger name="org.springframework" level="ERROR" />
+    <logger name="org.hibernate" level="ERROR" />
+
+    <!-- Enable JMX for dynamic log level control -->
+    <jmxConfigurator />
+
+    <!-- Profiles for different environments (example) -->
+    <springProfile name="dev">
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE" />
+        </root>
+    </springProfile>
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="ASYNC_CONSOLE" />
+            <appender-ref ref="ASYNC_FILE" />
+            <appender-ref ref="LOGSTASH" />
+        </root>
+    </springProfile>
+</configuration>
