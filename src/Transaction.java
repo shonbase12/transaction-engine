@@ -5,13 +5,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Represents a financial transaction with a unique ID, amount, type, timestamp, accountId, currency, and description.
+ * Represents a financial transaction with a unique ID, amount, type, timestamp, accountId, currency, description, and state.
  */
 public final class Transaction {
     private static final Logger logger = LoggerFactory.getLogger(Transaction.class);
 
     public enum TransactionType {
         CREDIT, DEBIT
+    }
+
+    public enum TransactionState {
+        PENDING, COMPLETED, CANCELLED
     }
 
     private final String id;
@@ -21,6 +25,7 @@ public final class Transaction {
     private final String accountId;
     private final Currency currency;
     private final String description;
+    private TransactionState state; // mutable state with controlled transitions
 
     /**
      * Constructs a Transaction instance with the given parameters.
@@ -41,6 +46,7 @@ public final class Transaction {
         this.currency = Currency.getInstance(currencyCode);
         this.description = description;
         this.timestamp = Instant.now(); // Set the current time
+        this.state = TransactionState.PENDING; // initial state
         logger.info("Transaction created: {}", this);
     }
 
@@ -102,6 +108,38 @@ public final class Transaction {
         return description;
     }
 
+    public TransactionState getState() {
+        return state;
+    }
+
+    /**
+     * Transition the transaction state to COMPLETED.
+     * Allowed only if current state is PENDING.
+     */
+    public void complete() {
+        if (state != TransactionState.PENDING) {
+            String msg = "Cannot complete transaction from state: " + state;
+            logger.error(msg);
+            throw new IllegalStateException(msg);
+        }
+        state = TransactionState.COMPLETED;
+        logger.info("Transaction {} marked as COMPLETED.", id);
+    }
+
+    /**
+     * Transition the transaction state to CANCELLED.
+     * Allowed only if current state is PENDING.
+     */
+    public void cancel() {
+        if (state != TransactionState.PENDING) {
+            String msg = "Cannot cancel transaction from state: " + state;
+            logger.error(msg);
+            throw new IllegalStateException(msg);
+        }
+        state = TransactionState.CANCELLED;
+        logger.info("Transaction {} marked as CANCELLED.", id);
+    }
+
     @Override
     public String toString() {
         return "Transaction{" +
@@ -112,6 +150,7 @@ public final class Transaction {
                 ", accountId='" + accountId + '\'' +
                 ", currency=" + currency +
                 ", description='" + description + '\'' +
+                ", state=" + state +
                 '}';
     }
 
@@ -126,11 +165,12 @@ public final class Transaction {
                 timestamp.equals(that.timestamp) &&
                 accountId.equals(that.accountId) &&
                 currency.equals(that.currency) &&
-                Objects.equals(description, that.description);
+                Objects.equals(description, that.description) &&
+                state == that.state;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, amount, type, timestamp, accountId, currency, description);
+        return Objects.hash(id, amount, type, timestamp, accountId, currency, description, state);
     }
 }
