@@ -1,5 +1,6 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -159,5 +160,77 @@ public class TransactionRepositoryImplTest {
             assertTrue(txOpt.isPresent());
             assertEquals(TransactionState.COMPLETED, txOpt.get().getState());
         }
+    }
+
+    @Test
+    public void testValidCancelTransition() {
+        Transaction tx = new Transaction(
+                "txCancel",
+                100.0,
+                Transaction.TransactionType.DEBIT,
+                "accCancel",
+                "USD",
+                "Test cancel transition"
+        );
+        repository.save(tx);
+
+        repository.updateState("txCancel", TransactionState.CANCELLED);
+
+        Optional<Transaction> updatedTxOpt = repository.findById("txCancel");
+        assertTrue(updatedTxOpt.isPresent());
+        assertEquals(TransactionState.CANCELLED, updatedTxOpt.get().getState());
+    }
+
+    @Test
+    public void testInvalidTransitionFromCompleted() {
+        Transaction tx = new Transaction(
+                "txInvalid",
+                100.0,
+                Transaction.TransactionType.CREDIT,
+                "accInvalid",
+                "USD",
+                "Test invalid transition"
+        );
+        repository.save(tx);
+        repository.updateState("txInvalid", TransactionState.COMPLETED);
+
+        Executable invalidUpdate = () -> repository.updateState("txInvalid", TransactionState.CANCELLED);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, invalidUpdate);
+        assertTrue(exception.getMessage().contains("Invalid state transition"));
+    }
+
+    @Test
+    public void testInvalidTransitionFromCancelled() {
+        Transaction tx = new Transaction(
+                "txInvalidCancel",
+                100.0,
+                Transaction.TransactionType.DEBIT,
+                "accInvalidCancel",
+                "USD",
+                "Test invalid transition from cancelled"
+        );
+        repository.save(tx);
+        repository.updateState("txInvalidCancel", TransactionState.CANCELLED);
+
+        Executable invalidUpdate = () -> repository.updateState("txInvalidCancel", TransactionState.COMPLETED);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, invalidUpdate);
+        assertTrue(exception.getMessage().contains("Invalid state transition"));
+    }
+
+    @Test
+    public void testInvalidStateUpdate() {
+        Transaction tx = new Transaction(
+                "txInvalidState",
+                100.0,
+                Transaction.TransactionType.CREDIT,
+                "accInvalidState",
+                "USD",
+                "Test invalid state"
+        );
+        repository.save(tx);
+
+        Executable invalidUpdate = () -> repository.updateState("txInvalidState", null);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, invalidUpdate);
+        assertTrue(exception.getMessage().contains("Invalid state transition"));
     }
 }
