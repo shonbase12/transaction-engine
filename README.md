@@ -1,33 +1,16 @@
-# Transaction Engine
+## PaymentService.java
 
-## Overview
-The Transaction Engine is designed to handle various transaction types efficiently. It provides a robust framework for managing transactions, ensuring data integrity and consistency.
+The `PaymentService.java` module is responsible for handling payment transactions within the application. This section outlines its public API, dependencies, and typical invocation flow.
 
-## Key Features
-- Support for multiple transaction types
-- Caching mechanism for improved performance
-- Detailed logging and monitoring capabilities
+### Public API
+- `processPayment(paymentDetails)`: Processes a payment with the given details.
+- `refundPayment(transactionId)`: Initiates a refund for the specified transaction.
 
-## Setup Instructions
-1. Clone the repository: `git clone https://github.com/shonbase12/transaction-engine`
-2. Install dependencies: `npm install`
-3. Run the application: `npm start`
+### Dependencies
+- `PaymentGateway`: Interface for interacting with payment gateways.
+- `TransactionLogger`: Utility for logging transaction details.
 
-## Usage Examples
-```javascript
-const transactionEngine = require('transaction-engine');
-
-const transaction = transactionEngine.createTransaction({/* transaction data */});
-transactionEngine.process(transaction);
-```
-
-## Troubleshooting Tips
-- Ensure all dependencies are installed.
-- Check logs for detailed error messages.
-
-## Contributing Guidelines
-- Fork the repository and create a new branch for your feature.
-- Submit a pull request with a clear description of your changes.
-
-## License
-This project is licensed under the MIT License.
+### Typical Invocation Flow
+1. Create an instance of `PaymentService`.
+2. Call `processPayment` with the necessary payment details.
+3. Handle the response and log the transaction using `TransactionLogger`.
