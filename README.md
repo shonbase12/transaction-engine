@@ -31,3 +31,20 @@ transactionEngine.process(transaction);
 
 ## License
 This project is licensed under the MIT License.
+
+## PaymentService Integration
+
+### Public API
+- `processPayment(Transaction transaction)`: Validates and processes a transaction
+- `refundPayment(String transactionId)`: Initiates refund for approved transaction
+
+### Dependencies
+- TransactionRepository
+- PaymentGatewayClient
+- AuditService
+
+### Invocation Flow
+1. PaymentController receives HTTP request
+2. PaymentService coordinates validation and processing
+3. Repository persists transaction state
+4. Gateway client communicates with external payment processors
